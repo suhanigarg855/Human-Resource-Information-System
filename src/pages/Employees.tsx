@@ -20,6 +20,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -39,6 +49,8 @@ export default function Employees() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Profile | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState<string | null>(null);
 
   // Redirect non-admin users
   useEffect(() => {
@@ -75,21 +87,59 @@ export default function Employees() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
-    const employeeData = {
-      name: formData.get('name') as string,
-      position: formData.get('position') as string,
-      date_of_joining: formData.get('date_of_joining') as string,
-    };
+    const name = formData.get('name') as string;
+    const position = formData.get('position') as string;
+    const date_of_joining = formData.get('date_of_joining') as string;
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
 
     try {
       if (editingEmployee) {
+        // Update existing employee
         const { error } = await supabase
           .from('profiles')
-          .update(employeeData)
+          .update({
+            name,
+            position,
+            date_of_joining,
+          })
           .eq('id', editingEmployee.id);
 
         if (error) throw error;
         toast.success('Employee updated successfully');
+      } else {
+        // Create new employee
+        const { error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              name,
+              position,
+            },
+          },
+        });
+
+        if (signUpError) throw signUpError;
+
+        // Update the date_of_joining for the newly created profile
+        // Wait a bit for the trigger to create the profile
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const { data: newProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', email)
+          .single();
+
+        if (newProfile) {
+          await supabase
+            .from('profiles')
+            .update({ date_of_joining })
+            .eq('id', newProfile.id);
+        }
+
+        toast.success('Employee created successfully');
       }
 
       setDialogOpen(false);
@@ -101,21 +151,44 @@ export default function Employees() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this employee?')) return;
+  const confirmDelete = async () => {
+    if (!employeeToDelete) return;
 
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', id);
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Not authenticated');
+        return;
+      }
 
-      if (error) throw error;
+      // Call edge function to delete user
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId: employeeToDelete }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete employee');
+      }
+
       toast.success('Employee deleted successfully');
       fetchEmployees();
     } catch (error) {
       console.error('Error deleting employee:', error);
-      toast.error('Failed to delete employee');
+      toast.error(error instanceof Error ? error.message : 'Failed to delete employee');
+    } finally {
+      setDeleteDialogOpen(false);
+      setEmployeeToDelete(null);
     }
   };
 
@@ -154,7 +227,7 @@ export default function Employees() {
               <DialogDescription>
                 {editingEmployee
                   ? 'Update employee information'
-                  : 'Note: New employees must register through the signup page'}
+                  : 'Create a new employee account'}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -167,6 +240,29 @@ export default function Employees() {
                   required
                 />
               </div>
+              {!editingEmployee && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="password"
+                      name="password"
+                      type="password"
+                      minLength={6}
+                      required
+                    />
+                  </div>
+                </>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="position">Position</Label>
                 <Input
@@ -187,7 +283,7 @@ export default function Employees() {
                 />
               </div>
               <Button type="submit" className="w-full">
-                {editingEmployee ? 'Update Employee' : 'Add Employee'}
+                {editingEmployee ? 'Update Employee' : 'Create Employee'}
               </Button>
             </form>
           </DialogContent>
@@ -236,7 +332,10 @@ export default function Employees() {
                       <Button
                         variant="destructive"
                         size="icon"
-                        onClick={() => handleDelete(employee.id)}
+                        onClick={() => {
+                          setEmployeeToDelete(employee.id);
+                          setDeleteDialogOpen(true);
+                        }}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -248,6 +347,22 @@ export default function Employees() {
           </TableBody>
         </Table>
       </div>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Do you want to delete this employee? This action cannot be undone.
+              This will permanently delete the employee account and all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>No</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>Yes</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
