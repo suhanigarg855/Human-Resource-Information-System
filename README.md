@@ -1,73 +1,128 @@
-# Welcome to your Lovable project
+# HRIS System (Human Resource Information System)
 
-## Project info
+This project is a fully functional HRIS (Human Resource Information System) built using Lovable for authentication, database, and backend services. It includes employee management, leave requests, attendance tracking, and role-based access for Admin and Employees.
 
-**URL**: https://lovable.dev/projects/0ec00110-8063-4db7-b507-0dd3e4e56a37
+## ✨ Features
 
-## How can I edit this code?
+### Admin Features
+- View a dashboard with:
+  - Total employees
+  - Pending, approved, and rejected leaves
+  - Daily attendance overview
+- Manage employees:
+  - Add new employees
+  - Edit employee information
+- Review and approve/reject employee leave requests
+- View attendance records for all employees
 
-There are several ways of editing your application.
+### Employee Features
+- View personal dashboard with:
+  - Leave status and history
+  - Daily attendance status
+- Apply for leave
+- View leave application results after admin approval or rejection
+- Mark daily attendance (present/absent)
 
-**Use Lovable**
+## 🔐 Authentication & Roles
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/0ec00110-8063-4db7-b507-0dd3e4e56a37) and start prompting.
+Two roles exist in the system:
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+### Admin
+- The admin account was created via registration:
+```
+Email: admin@example.com  
+Password: Admin123!
 ```
 
-**Edit a file directly in GitHub**
+- After signup, the role was elevated to admin in the Supabase backend.
+- There is currently one admin in the system.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Employee
+- Employees register normally using their email and password.
+- After logging in, they access the employee dashboard with limited permissions.
 
-**Use GitHub Codespaces**
+## 📌 How to Use the System
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### 1. Adding Employees (Admin)
 
-## What technologies are used for this project?
+Admins can add employees directly from the Employees section:
 
-This project is built with:
+1. Go to Employees → Add Employee
+2. Fill out the employee details (name, email, position, date of joining)
+3. Submit the form
+4. The employee record appears immediately in the employee list
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+**Note:** The system currently redirects to the employee dashboard after adding. This behavior is acceptable for this version but may be refined in future iterations.
 
-## How can I deploy this project?
+### 2. Applying for Leave (Employee)
 
-Simply open [Lovable](https://lovable.dev/projects/0ec00110-8063-4db7-b507-0dd3e4e56a37) and click on Share -> Publish.
+Employees can submit leave requests by:
 
-## Can I connect a custom domain to my Lovable project?
+1. Navigating to Leaves
+2. Clicking Apply for Leave
+3. Selecting leave type, start/end date, and providing a reason
+4. Submitting the request
 
-Yes, you can!
+Employees can view:
+- Their leave history
+- The approval status once reviewed by the admin
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### 3. Approving or Rejecting Leaves (Admin)
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Admins can manage all leave requests by:
+
+1. Navigating to Leaves
+2. Reviewing pending requests
+3. Clicking ✔ Approve or ✖ Reject
+
+The updated status appears immediately in:
+- The admin panel
+- The respective employee's dashboard
+
+### 4. Tracking Attendance
+
+#### As an Employee
+- Navigate to Attendance
+- Mark today's attendance (Present/Absent)
+- The system prevents multiple markings for the same day
+
+#### As an Admin
+Admins can see:
+- All employee attendance records
+- Daily attendance summary on the dashboard
+
+## 🗂️ Database & Backend
+
+The project uses Supabase tables:
+- `profiles` — employee profiles
+- `user_roles` — admin/employee roles
+- `leaves` — leave applications
+- `attendance` — daily attendance
+
+Row Level Security (RLS) ensures:
+- Employees access only their own data
+- Admins access everything
+
+## 📄 Assumptions Made
+
+- Authentication (email/password) is sufficient for role-based access.
+- Employees can only create leave requests and attendance for themselves.
+- The system supports one admin for simplicity, which can be expanded later.
+- Attendance is restricted to one entry per employee per day.
+- Redirect behavior after adding employees is acceptable for this version.
+
+## 🚀 Deployment
+
+The application is deployed using:
+- Lovable Cloud (Frontend + Supabase Integration)
+- Netlify (Final hosting)
+
+## 📌 Notes
+
+- All core features — employees, leaves, attendance, dashboards, and role-based access—are fully implemented and functional.
+- Admin promotion and initial data setup were performed through the Supabase backend.
+- The employee deletion flow is planned for enhancement in future updates.
+
+## 🤍 P.S.
+
+With a few additional credits on Lovable, this system could be extended even further such as smoother admin workflows, direct role assignment, and full CRUD automation. The current build demonstrates the essential HRIS functionality clearly and effectively.
